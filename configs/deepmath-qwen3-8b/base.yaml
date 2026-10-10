@@ -1,0 +1,79 @@
+# Common paper protocol. Materialize a run from matrix.yaml before training.
+base_model: /mnt/model
+tokenizer_use_fast: true
+trust_remote_code: true
+
+output_dir: /mnt/runs/UNMATERIALIZED
+seed: 42
+
+rl: grpo
+trl:
+  beta: 0.0
+  max_completion_length: 8192
+  num_generations: 8
+  loss_type: dr_grpo
+  log_completions: true
+  use_vllm: true
+  vllm_mode: colocate
+  reward_funcs:
+    - rewards.strict_format_reward_shaped_4_empty
+    - rewards.accuracy_r
+  reward_weights: [1.0, 1.0]
+  scale_rewards: false
+  vllm_enable_sleep_mode: false
+
+vllm:
+  enable_prefix_caching: true
+  tensor_parallel_size: 1
+  gpu_memory_utilization: 0.3
+  max_model_len: 9216
+
+datasets:
+  - path: /mnt/data/train
+    type: rewards.deepmath_transform
+
+# Reconstruction, not a paper-reported setting: use a per-rank microbatch of 2
+# on one 4-GPU node. The materializer derives gradient accumulation from this,
+# the requested completion batch, and G. It pins optimizer steps from the paper's
+# dataset-size / prompt-groups-per-step arithmetic.
+micro_batch_size: 2
+gradient_accumulation_steps: 8
+max_steps: 674
+
+ddp_find_unused_parameters: false
+torch_compile: false
+num_epochs: 1
+optimizer: adamw_torch_fused
+weight_decay: 0.0
+learning_rate: 1.0e-5
+lr_scheduler: cosine
+warmup_ratio: 0.1
+cosine_min_lr_ratio: 0.15
+
+fp8: false
+fp16: false
+bf16: true
+tf32: false
+float32: false
+
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+flash_attention: true
+xformers_attention: false
+
+use_wandb: false
+use_tensorboard: true
+logging_steps: 10
+
+save_strategy: epoch
+saves_per_epoch: 1
+save_total_limit: 1
+
+dataset_keep_in_memory: true
+dataloader_pin_memory: true
+
+special_tokens:
+  bos_token: null
+  eos_token: <|endoftext|>
+  pad_token: <|vision_pad|>

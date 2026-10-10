@@ -1,0 +1,57 @@
+# Local credentials and environment files
+.env
+.env.*
+!.env.example
+.netrc
+.npmrc
+.pypirc
+*.pem
+*.key
+*.token
+*token*.json
+secrets.*
+credentials.*
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+cache/
+external/
+
+# Models, datasets, runtime images, and experiment outputs
+models/
+datasets/
+runs/
+outputs/
+exports/
+svd_results/
+wandb/
+tensorboard/
+logs/
+checkpoints/
+*.sif
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.npy
+*.parquet
+*.arrow
+*.jsonl
+*.log
+*.out
+*.err
+
+# Temporary/editor artifacts and repository metadata
+*.bak
+*.tmp
+* copy.py
+.git/

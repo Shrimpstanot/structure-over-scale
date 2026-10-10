@@ -1,0 +1,96 @@
+Bootstrap: docker
+From: nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04
+
+%labels
+    org.opencontainers.image.title Structure Over Scale RLVR
+    org.opencontainers.image.description Qwen3-8B DeepMath-Hard Axolotl GRPO runtime
+    ai.structure-over-scale.quanta-revision bffc4e2d4970c81aa02dca461213aee8d0e9d740
+    ai.structure-over-scale.assets runtime-mounted
+
+%files
+    containers/requirements-runtime.txt /opt/build/requirements.txt
+
+%post -c /bin/bash
+    set -euo pipefail
+    umask 022
+    export DEBIAN_FRONTEND=noninteractive
+    export PIP_RETRIES=20
+    export PIP_DEFAULT_TIMEOUT=60
+    export PIP_CACHE_DIR=/opt/build/.pip-cache
+    export TMPDIR=/opt/build/tmp
+    mkdir -p "$TMPDIR"
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        git \
+        libaio-dev \
+        libglib2.0-0 \
+        libgl1 \
+        libnuma1 \
+        ninja-build \
+        python3 \
+        python3-dev \
+        python3-pip \
+        python3-venv
+
+    python3 -m venv /opt/venv
+    cd /opt/build
+    /opt/venv/bin/python -m pip install --upgrade pip setuptools wheel packaging ninja
+    /opt/venv/bin/python -m pip install \
+        --index-url https://download.pytorch.org/whl/cu128 \
+        torch==2.9.0+cu128 torchvision==0.24.0+cu128 torchaudio==2.9.0+cu128
+    MAX_JOBS=2 /opt/venv/bin/python -m pip install \
+        --extra-index-url https://download.pytorch.org/whl/cu128 \
+        --no-build-isolation \
+        --no-deps \
+        -r /opt/build/requirements.txt
+    /opt/venv/bin/python -c "from importlib.metadata import version; expected = {'accelerate': '1.12.0', 'axolotl': '0.13.0.dev0', 'datasets': '4.4.2', 'flash_attn': '2.8.3', 'liger_kernel': '0.6.4', 'math-verify': '0.8.0', 'nvidia-cudnn-frontend': '1.13.0', 'nvidia-cutlass-dsl': '4.2.1', 'nvidia-ml-py': '12.560.30', 'peft': '0.18.0', 'torch': '2.9.0+cu128', 'torchao': '0.13.0+cu128', 'torchaudio': '2.9.0+cu128', 'torchvision': '0.24.0+cu128', 'transformers': '4.57.1', 'trl': '0.25.1', 'vllm': '0.11.1', 'xformers': '0.0.33.post1'}; found = {name: version(name) for name in expected}; assert found == expected, (found, expected); print(found)"
+    
+    # Normalize permissions for files created in the virtual environment.
+    chmod -R a+rX /opt/venv
+    chmod 0755 /opt /opt/venv /opt/venv/bin
+
+    # Verify runtime executables remain accessible to arbitrary UIDs.
+    for executable in \
+        /bin/sh \
+        /usr/bin/ls \
+        /usr/bin/true \
+        /opt/venv/bin/python
+    do
+        resolved="$(readlink -f "$executable")"
+
+        if ! find "$resolved" \
+            -maxdepth 0 \
+            -type f \
+            -perm -0001 |
+            grep -q .
+        then
+            echo "ERROR: not executable by arbitrary runtime UID:"
+            stat -Lc '%A %a %U:%G %n' "$executable"
+            exit 1
+        fi
+    done
+
+    apt-get clean
+    rm -rf /var/lib/apt/lists/* /root/.cache/pip /tmp/pip-cache /opt/build
+
+%environment
+    export PATH=/opt/venv/bin:$PATH
+    export PYTHONNOUSERSITE=1
+    export AXOLOTL_DO_NOT_TRACK=1
+    export GRADIO_ANALYTICS_ENABLED=False
+    export HF_HUB_DISABLE_TELEMETRY=1
+    export TOKENIZERS_PARALLELISM=false
+    export PYTORCH_ALLOC_CONF=expandable_segments:True
+
+%test
+    /opt/venv/bin/python -c "import axolotl, cudnn, cutlass, flash_attn, liger_kernel, math_verify, pynvml, quanta, torch, torchao, torchaudio, torchvision, transformers, trl, vllm, xformers; from axolotl.cli.config import load_cfg; from axolotl.core.trainers.grpo.trainer import AxolotlGRPOTrainer; assert hasattr(AxolotlGRPOTrainer, '_move_model_to_vllm'); assert hasattr(AxolotlGRPOTrainer, '_fix_param_name_to_vllm'); print(torch.__version__, torch.version.cuda)"
+
+
+%runscript
+    exec "$@"
+
+%help
+    Dependencies only: models, datasets, configs, source, caches, and outputs are
+    intentionally absent. Mount them with scripts/run_grpo.sh.

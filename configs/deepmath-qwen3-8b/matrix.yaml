@@ -1,0 +1,101 @@
+# Qwen3-8B / DeepMath-Hard paper adapter definitions. Seed and batch size
+# remain runtime dimensions.
+runs:
+  lora-r8: &lora_r8
+    adapter: lora
+    lora_r: 8
+    lora_alpha: 32
+    lora_dropout: 0.0
+    lora_target_linear: true
+  lora-r1:
+    <<: *lora_r8
+    lora_r: 1
+  lora-r4:
+    <<: *lora_r8
+    lora_r: 4
+  lora-r16:
+    <<: *lora_r8
+    lora_r: 16
+  lora-r32:
+    <<: *lora_r8
+    lora_r: 32
+  lora-r64:
+    <<: *lora_r8
+    lora_r: 64
+  lora-r128:
+    <<: *lora_r8
+    lora_r: 128
+  lora-r256:
+    <<: *lora_r8
+    lora_r: 256
+
+  dora-r8: &dora_r8
+    adapter: lora
+    peft_use_dora: true
+    lora_r: 8
+    lora_alpha: 32
+    lora_dropout: 0.0
+    lora_target_linear: true
+  dora-r16:
+    <<: *dora_r8
+    lora_r: 16
+  dora-r32:
+    <<: *dora_r8
+    lora_r: 32
+  dora-r64:
+    <<: *dora_r8
+    lora_r: 64
+  dora-r16-no-kv:
+    <<: *dora_r8
+    lora_r: 16
+    lora_target_linear: false
+    lora_target_modules: [q_proj, o_proj, gate_proj, up_proj, down_proj]
+
+  quanta-d3: &quanta_d3
+    adapter: quanta
+    plugins: [quanta_axolotl.QuanTAPlugin]
+    trainer_cls: quanta_axolotl.QuanTAGRPOTrainer
+    quanta:
+      d: 3
+      per_dim_features: [16, 16, 16]
+      dropout: 0.0
+      merge_weights: true
+      target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  quanta-d3-no-v:
+    <<: *quanta_d3
+    quanta:
+      d: 3
+      per_dim_features: [16, 16, 16]
+      dropout: 0.0
+      merge_weights: true
+      target_modules: [q_proj, k_proj, o_proj, gate_proj, up_proj, down_proj]
+  quanta-d3-no-kv:
+    <<: *quanta_d3
+    quanta:
+      d: 3
+      per_dim_features: [16, 16, 16]
+      dropout: 0.0
+      merge_weights: true
+      target_modules: [q_proj, o_proj, gate_proj, up_proj, down_proj]
+
+  quanta-d4: &quanta_d4
+    adapter: quanta
+    plugins: [quanta_axolotl.QuanTAPlugin]
+    trainer_cls: quanta_axolotl.QuanTAGRPOTrainer
+    quanta:
+      d: 4
+      per_dim_features: [16, 8, 8, 4]
+      dropout: 0.0
+      merge_weights: true
+      target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+  quanta-d4-no-kv:
+    <<: *quanta_d4
+    quanta:
+      d: 4
+      per_dim_features: [16, 8, 8, 4]
+      dropout: 0.0
+      merge_weights: true
+      target_modules: [q_proj, o_proj, gate_proj, up_proj, down_proj]
+
+  fft:
+    adapter: null

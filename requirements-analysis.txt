@@ -1,0 +1,5 @@
+# Optional plotting add-on for a separately managed analysis environment.
+# Intentionally unpinned: these packages were absent from the runtime freeze.
+# Existing prerequisites include torch, numpy, pandas, scipy, and safetensors.
+matplotlib
+seaborn
