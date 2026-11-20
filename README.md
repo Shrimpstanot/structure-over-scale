@@ -162,4 +162,15 @@ to their respective licenses.
 
 ## Citation
 
-BibTeX citation pending.
+```
+@article{
+kazakov2026structure,
+title={Structure Over Scale: Rethinking Adaptation for Reinforcement Learning with Verifiable Rewards},
+author={Allan Kazakov and Abdurrahman Javat},
+journal={Transactions on Machine Learning Research},
+issn={2835-8856},
+year={2026},
+url={https://openreview.net/forum?id=17kr8cCW7s},
+note={}
+}
+```
